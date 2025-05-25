@@ -143,7 +143,6 @@ macro_rules! belt_encryption_algorithm {
                 plaintext: &[u8],
             ) -> Box<[u8]> {
                 let padded_plaintext = Block::pad(&plaintext, $block_size);
-                println!("Encrypting (padded): {padded_plaintext:?}");
                 let mut blocks: Vec<Box<[u8]>> = vec![];
                 for mut block in padded_plaintext {
                     unsafe { bindings::$encrypt_func(
@@ -176,7 +175,6 @@ macro_rules! belt_encryption_algorithm {
                     ); }
                     padded_plaintext.push(Box::from(chunk));
                 }
-                println!("Decrypted to (padded): {padded_plaintext:?}");
                 Block::unpad(padded_plaintext)
             }
         }

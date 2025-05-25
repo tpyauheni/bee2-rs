@@ -146,7 +146,6 @@ mod tests {
             let last_block_offset = data.len() / 16 * 16;
             let last_block = &data[last_block_offset..];
             blocks.push(Box::from(last_block));
-            println!("Testing with data ({data_size}): {blocks:?}");
 
             if data_size > 0 && data_size < 16 {
                 assert!(Block::is_padding_correct(blocks.clone()));
