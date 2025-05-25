@@ -1,0 +1,3 @@
+[submodule "bee2-c"]
+	path = bee2-c
+	url = https://github.com/agievich/bee2/

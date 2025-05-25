@@ -1,0 +1,43 @@
+[package]
+name = "bee2-rs"
+version = "0.1.0"
+edition = "2024"
+
+[build-dependencies]
+cmake = "0.1"
+bindgen = "0.71"
+glob = "0.3"
+
+[features]
+default = ["full"]
+
+block = []
+
+belt = ["block"]
+belt-wbl = ["belt"]
+belt-ecb = ["belt"]
+belt-cbc = ["belt"]
+belt-cfb = ["belt"]
+belt-ctr = ["belt"]
+belt-mac = ["belt"]
+belt-dwp = ["belt"]
+belt-che = ["belt"]
+belt-kwp = ["belt"]
+belt-bde = ["belt"]
+belt-sde = ["belt"]
+belt-fmt = ["belt"]
+belt-krp = ["belt"]
+belt-hmac = ["belt"]
+belt-hash = ["belt"]
+belt-pbkdf2 = ["belt"]
+belt-full = ["belt-wbl", "belt-ecb", "belt-cbc", "belt-cfb", "belt-ctr", "belt-mac", "belt-dwp",
+    "belt-che", "belt-kwp", "belt-bde", "belt-sde", "belt-fmt", "belt-krp", "belt-hmac",
+    "belt-hash", "belt-pbkdf2"]
+
+full = ["belt-full"]
+
+[profile.release]
+lto = true
+opt-level = 3
+codegen-units = 1
+debug = false
