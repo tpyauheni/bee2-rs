@@ -4,9 +4,9 @@ use glob::glob;
 const INCLUDE_DIRS: [&str; 2] = ["include", "src"];
 
 struct Builder<'a> {
-    // project_dir: PathBuf,
+    project_dir: PathBuf,
     lib_dir_str: &'a str,
-    clib_dir: Option<PathBuf>,
+    clib_dir: PathBuf,
 }
 
 // `eprintln!` here is used to see printed text when running with `-vv` flag.
@@ -14,6 +14,18 @@ struct Builder<'a> {
 impl<'a> Builder<'a> {
     fn update_clib(&mut self) -> bool {
         let time_before = SystemTime::now();
+
+        if !fs::exists(self.lib_dir_str).unwrap_or(false) {
+            let exit_status = Command::new("git")
+                .arg("clone")
+                .arg("https://github.com/agievich/bee2")
+                .arg(self.lib_dir_str)
+                .current_dir(&self.project_dir)
+                .status()
+                .unwrap();
+            eprintln!("Cloned CLib repository, exit status: {exit_status}");
+        }
+
         let exit_status = Command::new("git")
             .arg("pull")
             .current_dir(self.lib_dir_str)
@@ -26,21 +38,13 @@ impl<'a> Builder<'a> {
 
     fn build_clib(&mut self) {
         eprintln!("Building CLib to {:?}", self.clib_dir);
-        let bee2_c = if let Some(dir) = self.clib_dir.as_ref() {
-            cmake::Config::new("bee2-c").out_dir(dir.join("cmake")) .build()
-        } else {
-            let result = cmake::build("bee2-c");
-            self.clib_dir = Some(result.clone());
-            result
-        };
+        let bee2_c = cmake::Config::new("bee2-c").out_dir(self.clib_dir.join("cmake")).build();
         let bee2_c_str = bee2_c.to_str().unwrap();
         eprintln!("Builded CLib to {bee2_c_str}");
     }
 
     fn generate_bindings_source(&mut self) {
-        let Some(clib_dir) = self.clib_dir.as_ref() else {
-            return;
-        };
+        let clib_dir = &self.clib_dir;
         let mut bindings = bindgen::Builder::default()
             .header(clib_dir.join("bindings.h").to_str().unwrap().to_owned())
             .parse_callbacks(Box::new(bindgen::CargoCallbacks::new()))
@@ -59,9 +63,7 @@ impl<'a> Builder<'a> {
     }
 
     fn generate_bindings_header(&mut self) -> bool {
-        let Some(clib_dir) = self.clib_dir.as_ref() else {
-            return false;
-        };
+        let clib_dir = &self.clib_dir;
         let glob_result = glob(
             &format!("{}/**/*.h", self.lib_dir_str)
         );
@@ -94,22 +96,20 @@ fn main() {
     let lib_dir_str = lib_dir.to_str().unwrap();
 
     let mut builder = Builder {
-        // project_dir: project_dir.clone(),
+        project_dir: project_dir.clone(),
         lib_dir_str,
-        clib_dir: Some(project_dir.join("target").join("build")),
+        clib_dir: project_dir.join("target").join("build"),
     };
 
     let clib_force_rebuild = builder.update_clib();
     println!(
         "cargo:rustc-link-search=native={}/lib",
-        builder.clib_dir.as_ref().unwrap().join("cmake").to_str().unwrap(),
+        builder.clib_dir.join("cmake").to_str().unwrap(),
     );
     println!("cargo:rustc-link-lib=static=bee2_static");
 
-    let clib_rebuilt = if clib_force_rebuild || (builder.clib_dir.is_some() && !fs::exists(
-        builder.clib_dir.as_ref().unwrap()
-    ).unwrap_or(false)) {
-        fs::create_dir_all(builder.clib_dir.as_ref().unwrap().join("cmake")).unwrap();
+    let clib_rebuilt = if clib_force_rebuild || !fs::exists(&builder.clib_dir).unwrap_or(false) {
+        fs::create_dir_all(builder.clib_dir.join("cmake")).unwrap();
         builder.build_clib();
         true
     } else {
@@ -120,7 +120,7 @@ fn main() {
 
     if force_regen_bindings ||
         clib_rebuilt ||
-        !fs::exists(builder.clib_dir.as_ref().unwrap().join("bindings.rs")).unwrap_or(false) {
+        !fs::exists(builder.clib_dir.join("bindings.rs")).unwrap_or(false) {
             builder.generate_bindings_source();
     }
 }
