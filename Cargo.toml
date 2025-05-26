@@ -34,7 +34,11 @@ belt-full = ["belt-wbl", "belt-ecb", "belt-cbc", "belt-cfb", "belt-ctr", "belt-m
     "belt-che", "belt-kwp", "belt-bde", "belt-sde", "belt-fmt", "belt-krp", "belt-hmac",
     "belt-hash", "belt-pbkdf2"]
 
-full = ["belt-full"]
+brng = []
+
+bign = ["brng"]
+
+full = ["belt-full", "bign"]
 
 [profile.release]
 lto = true

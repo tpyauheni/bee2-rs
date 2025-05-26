@@ -67,6 +67,22 @@ error!(
         NotEnoughData(Vec<Box<[u8]>>, u8, u8),
     }
 );
+error!(
+    pub struct BignError {
+        code: u32,
+    }
+    Default {
+        code,
+    }
+);
+error!(
+    pub struct AnyError {
+        error: Box<dyn std::error::Error>,
+    }
+    Default {
+        error,
+    }
+);
 
 pub type Result<T> = core::result::Result<T, Box<dyn Bee2Error>>;
 pub type Bee2Result<T> = Result<T>;
