@@ -75,7 +75,9 @@ impl<'a> Builder<'a> {
         content += "\"";
         let header_path = clib_dir.join("bindings.h").to_str().unwrap().to_owned();
 
-        if !fs::exists(&header_path).unwrap_or(true) || content != str::from_utf8(&fs::read(&header_path).unwrap()).unwrap() {
+        if !fs::exists(&header_path).unwrap_or(true) || content != String::from_utf8(
+            fs::read(&header_path).unwrap()
+        ).unwrap() {
             fs::write(&header_path, content).unwrap();
             eprintln!("Generated bindings header to {header_path}");
             true
@@ -98,10 +100,15 @@ fn main() {
     };
 
     let clib_force_rebuild = builder.update_clib();
-    println!("cargo:rustc-link-search=native={}/lib", builder.clib_dir.as_ref().unwrap().join("cmake").to_str().unwrap());
+    println!(
+        "cargo:rustc-link-search=native={}/lib",
+        builder.clib_dir.as_ref().unwrap().join("cmake").to_str().unwrap(),
+    );
     println!("cargo:rustc-link-lib=static=bee2_static");
 
-    let clib_rebuilt = if clib_force_rebuild || (builder.clib_dir.is_some() && !fs::exists(builder.clib_dir.as_ref().unwrap()).unwrap_or(false)) {
+    let clib_rebuilt = if clib_force_rebuild || (builder.clib_dir.is_some() && !fs::exists(
+        builder.clib_dir.as_ref().unwrap()
+    ).unwrap_or(false)) {
         fs::create_dir_all(builder.clib_dir.as_ref().unwrap().join("cmake")).unwrap();
         builder.build_clib();
         true
