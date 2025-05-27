@@ -11,7 +11,7 @@ struct Builder<'a> {
 
 // `eprintln!` here is used to see printed text when running with `-vv` flag.
 
-impl<'a> Builder<'a> {
+impl Builder<'_> {
     fn update_clib(&mut self) -> bool {
         let time_before = SystemTime::now();
 
