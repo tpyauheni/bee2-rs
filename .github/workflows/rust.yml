@@ -22,3 +22,5 @@ jobs:
       run: cargo build -vv
     - name: Run tests
       run: cargo test --verbose
+    - name: Run code static analysis
+      run: cargo clippy -- -D warnings

@@ -99,6 +99,22 @@ impl BignKey {
         }
     }
 
+    pub fn try_load(
+        params: BignParameters,
+        public_key: &[u8],
+        private_key: &[u8],
+    ) -> Bee2Result<Self> {
+        let key = Self {
+            private_key: Box::from(private_key),
+            public_key: Box::from(public_key),
+            params,
+        };
+        key.validate_keypair()?;
+        key.validate_public_key()?;
+        key.params.validate()?;
+        Ok(key)
+    }
+
     pub fn validate_keypair(&self) -> Bee2Result<()> {
         let code = unsafe { bindings::bignKeypairVal(
             (&self.params.params) as *const bindings::bign_params,
