@@ -5,7 +5,7 @@
 
 ## Supported modules (WIP)
 - [ ] Bake
-- [ ] Bash (not to be confused with *Bourne Again SHell*)
+- [x] Bash (not to be confused with *Bourne Again SHell*)
 - [ ] Bels
 - [x] Belt
 - [x] Bign
