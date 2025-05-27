@@ -38,7 +38,12 @@ brng = []
 
 bign = ["brng"]
 
-full = ["belt-full", "bign"]
+bash = []
+bash-hash = ["bash"]
+bash-prg = ["bash"]
+bash-full = ["bash-hash", "bash-prg"]
+
+full = ["belt-full", "bign", "bash-full"]
 
 [profile.release]
 lto = true

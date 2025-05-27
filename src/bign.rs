@@ -1,8 +1,6 @@
 use std::ffi::{self, CString};
 
-use crate::{bindings, brng, errors::{AnyError, Bee2Result, BignError}};
-
-const ERR_OK: u32 = 0;
+use crate::{bindings, brng, errors::{AnyError, Bee2Result, BignError}, ERR_OK};
 
 #[derive(Clone)]
 pub struct BignParameters {

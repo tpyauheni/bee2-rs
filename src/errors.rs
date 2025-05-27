@@ -83,6 +83,22 @@ error!(
         error,
     }
 );
+error!(
+    pub struct BashError {}
+    Default {}
+    enum BashErrorKind {
+        InvalidResistanceLevel,
+        HashLengthIsTooLarge,
+        CodeError(u32),
+    }
+);
+error!(
+    pub struct BrngError {}
+    Default {}
+    enum BrngErrorKind {
+        CodeError(u32),
+    }
+);
 
 pub type Result<T> = core::result::Result<T, Box<dyn Bee2Error>>;
 pub type Bee2Result<T> = Result<T>;
