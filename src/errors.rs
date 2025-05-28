@@ -48,9 +48,19 @@ macro_rules! error {
 }
 
 error!(
+    pub struct AnyError {
+        error: Box<dyn std::error::Error>,
+    }
+    Default {
+        error,
+    }
+);
+#[cfg(feature = "belt")]
+error!(
     pub struct InvalidBlockError {}
     Default {}
 );
+#[cfg(feature = "block")]
 error!(
     pub struct InvalidPaddingError {}
     Default {}
@@ -67,6 +77,7 @@ error!(
         NotEnoughData(Vec<Box<[u8]>>, u8, u8),
     }
 );
+#[cfg(feature = "bign")]
 error!(
     pub struct BignError {
         code: u32,
@@ -75,14 +86,7 @@ error!(
         code,
     }
 );
-error!(
-    pub struct AnyError {
-        error: Box<dyn std::error::Error>,
-    }
-    Default {
-        error,
-    }
-);
+#[cfg(feature = "bash")]
 error!(
     pub struct BashError {}
     Default {}
@@ -92,10 +96,19 @@ error!(
         CodeError(u32),
     }
 );
+#[cfg(feature = "brng")]
 error!(
     pub struct BrngError {}
     Default {}
     enum BrngErrorKind {
+        CodeError(u32),
+    }
+);
+#[cfg(feature = "belt")]
+error!(
+    pub struct BeltError {}
+    Default {}
+    enum BeltErrorKind {
         CodeError(u32),
     }
 );

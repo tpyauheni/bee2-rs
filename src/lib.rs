@@ -11,6 +11,8 @@ pub mod errors;
 pub mod block;
 #[cfg(feature = "belt")]
 pub mod belt;
+#[cfg(feature = "belt-hmac")]
+pub mod belt_hmac;
 #[cfg(feature = "bign")]
 pub mod bign;
 #[cfg(feature = "brng")]

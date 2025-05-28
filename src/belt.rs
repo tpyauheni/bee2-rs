@@ -1,6 +1,6 @@
 use std::{ffi, rc::Rc};
 
-use crate::{bindings, errors::{Bee2Result, InvalidBlockError}, block::Block};
+use crate::{bindings, block::Block, errors::{Bee2Result, InvalidBlockError}, belt_hmac::BeltHmac};
 
 pub trait BeltKey {
     fn len() -> u8;
@@ -112,6 +112,8 @@ macro_rules! key {
             to_encryption_algorithm!(kwp, BeltKwp, beltWBL_keep, beltWBLStart);
             #[cfg(feature = "belt-bde")]
             to_encryption_algorithm!(bde, BeltBde, beltBDE_keep, beltBDEStart, use iv);
+            #[cfg(feature = "belt-hmac")]
+            to_encryption_algorithm!(hmac, BeltHmac, beltHMAC_keep, beltHMACStart);
         }
 
         impl BeltKey for $name {
@@ -123,7 +125,7 @@ macro_rules! key {
 }
 
 key!(BeltKey128, 16);
-key!(BeltKey196, 24);
+key!(BeltKey192, 24);
 key!(BeltKey256, 32);
 
 pub trait BeltEncryptionAlgorithm {
@@ -203,7 +205,7 @@ belt_encryption_algorithm!(BeltBde, beltBDEStart, beltBDEStepE, beltBDEStepD, 16
 
 #[cfg(test)]
 mod tests {
-    use super::{BeltKey128, BeltKey196, BeltKey256, BeltEncryptionAlgorithm};
+    use super::{BeltKey128, BeltKey192, BeltKey256, BeltEncryptionAlgorithm};
 
     macro_rules! perform_belt_test {
         ($key_init:expr, $mode:ident($($args:expr),*), $plaintext:literal $(,)?) => {
@@ -234,7 +236,7 @@ mod tests {
                 );
                 #[cfg($use_iv())]
                 perform_belt_test!(
-                    BeltKey196::new([234; 24]),
+                    BeltKey192::new([234; 24]),
                     $mode([56; 16]),
                     "",
                 );
@@ -252,7 +254,7 @@ mod tests {
                 );
                 #[cfg(not($use_iv()))]
                 perform_belt_test!(
-                    BeltKey196::new([234; 24]),
+                    BeltKey192::new([234; 24]),
                     $mode(),
                     "",
                 );
@@ -284,51 +286,36 @@ mod tests {
 
     #[test]
     fn test_belt() {
-        let key = BeltKey128::new([
-            41, 242, 132, 45, 68, 168, 187, 151, 34, 16, 240, 116, 73, 207, 39, 223]);
+        let key = BeltKey128::new([41, 242, 132, 45, 68, 168, 187, 151, 34, 16, 240, 116, 73, 207, 39, 223]);
         let block = [137, 130, 220, 72, 167, 6, 110, 155, 224, 30, 80, 122, 184, 167, 80, 23];
         let encrypted_block = key.encrypt(block);
         assert_ne!(block, encrypted_block);
-        let key = BeltKey128::new([
-            41, 242, 132, 45, 68, 168, 187, 151, 34, 16, 240, 116, 73, 207, 39, 223]);
+        let key = BeltKey128::new([41, 242, 132, 45, 68, 168, 187, 151, 34, 16, 240, 116, 73, 207, 39, 223]);
         let decrypted_block = key.decrypt(encrypted_block);
         assert_eq!(block, decrypted_block);
-        let invalid_key = BeltKey128::new([
-            233, 238, 213, 220, 88, 33, 228, 255, 75, 37, 103, 125, 50, 243, 113, 11]);
+        let invalid_key = BeltKey128::new([233, 238, 213, 220, 88, 33, 228, 255, 75, 37, 103, 125, 50, 243, 113, 11]);
         let invalid_block = invalid_key.decrypt(encrypted_block);
         assert_ne!(block, invalid_block);
 
-        let key = BeltKey196::new([
-            94, 85, 110, 244, 227, 175, 56, 16, 243, 112, 0, 106, 38, 183, 125, 26, 18, 19, 226,
-            20, 239, 57, 226, 83]);
+        let key = BeltKey192::new([94, 85, 110, 244, 227, 175, 56, 16, 243, 112, 0, 106, 38, 183, 125, 26, 18, 19, 226, 20, 239, 57, 226, 83]);
         let block = [71, 230, 7, 222, 154, 15, 72, 136, 129, 72, 24, 151, 161, 10, 134, 54];
         let encrypted_block = key.encrypt(block);
         assert_ne!(block, encrypted_block);
-        let key = BeltKey196::new([
-            94, 85, 110, 244, 227, 175, 56, 16, 243, 112, 0, 106, 38, 183, 125, 26, 18, 19, 226,
-            20, 239, 57, 226, 83]);
+        let key = BeltKey192::new([94, 85, 110, 244, 227, 175, 56, 16, 243, 112, 0, 106, 38, 183, 125, 26, 18, 19, 226, 20, 239, 57, 226, 83]);
         let decrypted_block = key.decrypt(encrypted_block);
         assert_eq!(block, decrypted_block);
-        let invalid_key = BeltKey196::new([
-            57, 14, 109, 214, 230, 0, 66, 189, 22, 64, 177, 215, 27, 226, 217, 4, 0, 214, 224,
-            197, 170, 213, 189, 207]);
+        let invalid_key = BeltKey192::new([57, 14, 109, 214, 230, 0, 66, 189, 22, 64, 177, 215, 27, 226, 217, 4, 0, 214, 224, 197, 170, 213, 189, 207]);
         let invalid_block = invalid_key.decrypt(encrypted_block);
         assert_ne!(block, invalid_block);
 
-        let key = BeltKey256::new([
-            8, 26, 176, 37, 208, 41, 187, 204, 194, 188, 125, 53, 59, 181, 224, 67, 178, 61, 214,
-            41, 9, 59, 208, 149, 32, 237, 104, 114, 253, 148, 222, 53]);
+        let key = BeltKey256::new([8, 26, 176, 37, 208, 41, 187, 204, 194, 188, 125, 53, 59, 181, 224, 67, 178, 61, 214, 41, 9, 59, 208, 149, 32, 237, 104, 114, 253, 148, 222, 53]);
         let block = [75, 164, 59, 107, 79, 141, 105, 104, 200, 145, 97, 206, 233, 194, 181, 103];
         let encrypted_block = key.encrypt(block);
         assert_ne!(block, encrypted_block);
-        let key = BeltKey256::new([
-            8, 26, 176, 37, 208, 41, 187, 204, 194, 188, 125, 53, 59, 181, 224, 67, 178, 61, 214,
-            41, 9, 59, 208, 149, 32, 237, 104, 114, 253, 148, 222, 53]);
+        let key = BeltKey256::new([8, 26, 176, 37, 208, 41, 187, 204, 194, 188, 125, 53, 59, 181, 224, 67, 178, 61, 214, 41, 9, 59, 208, 149, 32, 237, 104, 114, 253, 148, 222, 53]);
         let decrypted_block = key.decrypt(encrypted_block);
         assert_eq!(block, decrypted_block);
-        let invalid_key = BeltKey256::new([
-            237, 91, 46, 51, 68, 133, 214, 212, 135, 188, 32, 166, 142, 232, 204, 2, 191, 17, 204,
-            100, 34, 215, 211, 234, 72, 179, 133, 225, 68, 149, 90, 122]);
+        let invalid_key = BeltKey256::new([237, 91, 46, 51, 68, 133, 214, 212, 135, 188, 32, 166, 142, 232, 204, 2, 191, 17, 204, 100, 34, 215, 211, 234, 72, 179, 133, 225, 68, 149, 90, 122]);
         let invalid_block = invalid_key.decrypt(encrypted_block);
         assert_ne!(block, invalid_block);
     }
