@@ -3,7 +3,7 @@ pub mod bindings {
     include!("../target/build/bindings.rs");
 }
 
-pub(crate) const ERR_OK: u32 = 0;
+pub const ERR_OK: u32 = 0;
 
 pub mod errors;
 

@@ -21,6 +21,9 @@ jobs:
     - name: Build
       run: cargo build -vv
     - name: Run tests
-      run: cargo test --verbose
+      run: cargo test --verbose --all-features
     - name: Run code static analysis
-      run: cargo clippy -- -D warnings
+      run: cargo clippy --all-features -- -D warnings
+    - name: Build examples
+      working-directory: ./examples/belt-cbc
+      run: cargo build

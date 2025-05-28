@@ -1,7 +1,8 @@
-use std::{error::Error, fmt::{self, Debug, Display}};
+use std::error::Error;
 
 pub trait Bee2Error : Error {}
 
+#[cfg(any(feature = "bign", feature = "belt", feature = "block", feature = "brng"))]
 macro_rules! error {
     ($visibility:vis struct $name:ident { $($struct_field_name:ident: $struct_field_type:ty),* $(,)? } Default { $($struct_init:tt),* $(,)? } $(,)?) => {
         #[derive(Debug)]
@@ -21,9 +22,9 @@ macro_rules! error {
             }
         }
 
-        impl Display for $name {
-            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-                Debug::fmt(&self, f)
+        impl std::fmt::Display for $name {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                std::fmt::Debug::fmt(&self, f)
             }
         }
 
@@ -47,6 +48,7 @@ macro_rules! error {
     };
 }
 
+#[cfg(feature = "bign")]
 error!(
     pub struct AnyError {
         error: Box<dyn std::error::Error>,
