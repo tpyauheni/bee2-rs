@@ -1,6 +1,8 @@
 use std::{ffi, rc::Rc};
 
-use crate::{belt_hmac::BeltHmac, bindings, block::Block, errors::{Bee2Result, BeltError, BeltErrorKind, InvalidBlockError}};
+#[cfg(feature = "belt-hmac")]
+use crate::belt_hmac::BeltHmac;
+use crate::{bindings, block::Block, errors::{Bee2Result, BeltError, BeltErrorKind, InvalidBlockError}};
 
 pub trait BeltKey {
     fn len() -> u8;

@@ -43,7 +43,7 @@ bash-hash = ["bash"]
 bash-prg = ["bash"]
 bash-full = ["bash-hash", "bash-prg"]
 
-full = ["belt-full", "bign", "bash-full"]
+full = []
 
 [profile.release]
 lto = true
