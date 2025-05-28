@@ -1,6 +1,8 @@
 use crate::errors::{Bee2Result, InvalidPaddingError, InvalidPaddingErrorKind};
 
-pub struct Block {}
+pub struct Block {
+    _private: (),
+}
 
 impl Block {
     pub fn pad(data: &[u8], block_size: u8) -> Vec<Box<[u8]>> {

@@ -2,6 +2,7 @@ use std::ffi;
 
 use crate::{bindings, errors::{Bee2Result, BeltError, BeltErrorKind}, ERR_OK};
 
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BeltHmac {
     pub(crate) state: Box<[u8]>,
 }

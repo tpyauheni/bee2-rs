@@ -1,6 +1,6 @@
 use std::{ffi, rc::Rc};
 
-use crate::{bindings, block::Block, errors::{Bee2Result, InvalidBlockError}, belt_hmac::BeltHmac};
+use crate::{belt_hmac::BeltHmac, bindings, block::Block, errors::{Bee2Result, BeltError, BeltErrorKind, InvalidBlockError}};
 
 pub trait BeltKey {
     fn len() -> u8;
@@ -40,7 +40,7 @@ macro_rules! to_encryption_algorithm {
 
 macro_rules! key {
     ($name: ident, $len: expr) => {
-        #[derive(Clone)]
+        #[derive(Debug, Clone, PartialEq, Eq)]
         pub struct $name {
             key: Rc<[u8; $len]>,
         }
@@ -128,6 +128,68 @@ key!(BeltKey128, 16);
 key!(BeltKey192, 24);
 key!(BeltKey256, 32);
 
+#[cfg(feature = "belt-pbkdf2")]
+impl BeltKey256 {
+    pub fn pbkdf2(password: &[u8], iterations: usize, salt: &[u8]) -> Bee2Result<Self> {
+        let mut key = [0u8; 32];
+        let code = unsafe { bindings::beltPBKDF2(
+            key.as_mut_ptr(),
+            password.as_ptr(),
+            password.len(),
+            iterations,
+            salt.as_ptr(),
+            salt.len(),
+        ) };
+        if code != 0 {
+            Err(BeltError::new_box(BeltErrorKind::CodeError(code)))
+        } else {
+            Ok(Self {
+                key: Rc::new(key),
+            })
+        }
+    }
+}
+
+impl BeltKey256 {
+    pub fn to_key192(self) -> BeltKey192 {
+        BeltKey192 {
+            key: Rc::new(self.key[..24].try_into().unwrap())
+        }
+    }
+
+    pub fn to_key192_unchecked(self) -> BeltKey192 {
+        BeltKey192 {
+            key: Rc::new(unsafe { self.key[..24].try_into().unwrap_unchecked() })
+        }
+    }
+
+    pub fn to_key128(self) -> BeltKey128 {
+        BeltKey128 {
+            key: Rc::new(self.key[..16].try_into().unwrap())
+        }
+    }
+
+    pub fn to_key128_unchecked(self) -> BeltKey128 {
+        BeltKey128 {
+            key: Rc::new(unsafe { self.key[..16].try_into().unwrap_unchecked() })
+        }
+    }
+}
+
+impl BeltKey192 {
+    pub fn to_key128(self) -> BeltKey128 {
+        BeltKey128 {
+            key: Rc::new(self.key[..16].try_into().unwrap())
+        }
+    }
+
+    pub fn to_key128_unchecked(self) -> BeltKey128 {
+        BeltKey128 {
+            key: Rc::new(unsafe { self.key[..16].try_into().unwrap_unchecked() })
+        }
+    }
+}
+
 pub trait BeltEncryptionAlgorithm {
     fn encrypt(&mut self, plaintext: &[u8]) -> Box<[u8]>;
     fn decrypt(&mut self, ciphertext: Box<[u8]>) -> Bee2Result<Box<[u8]>>;
@@ -135,6 +197,7 @@ pub trait BeltEncryptionAlgorithm {
 
 macro_rules! belt_encryption_algorithm {
     ($name: ident, $init_func: ident, $encrypt_func: ident, $decrypt_func: ident, $block_size: expr) => {
+        #[derive(Debug, Clone, PartialEq, Eq)]
         pub struct $name {
             pub(crate) state: Box<[u8]>,
         }
@@ -318,5 +381,54 @@ mod tests {
         let invalid_key = BeltKey256::new([237, 91, 46, 51, 68, 133, 214, 212, 135, 188, 32, 166, 142, 232, 204, 2, 191, 17, 204, 100, 34, 215, 211, 234, 72, 179, 133, 225, 68, 149, 90, 122]);
         let invalid_block = invalid_key.decrypt(encrypted_block);
         assert_ne!(block, invalid_block);
+    }
+
+    #[cfg(feature = "belt-pbkdf2")]
+    #[test]
+    fn test_pbkdf2() {
+        let key = BeltKey256::pbkdf2("Som3 sup3r S3CUR3 p1ssw0rd!".as_bytes(), 10000, &[11, 127, 226, 250, 126, 39, 123, 225]).unwrap();
+        assert_eq!(*key.key, [20, 222, 68, 203, 114, 84, 147, 135, 1, 175, 180, 211, 244, 236, 61, 67, 147, 13, 151, 111, 24, 24, 112, 229, 154, 161, 20, 221, 140, 57, 214, 136]);
+        let key = BeltKey256::pbkdf2(&[104, 40, 39, 218, 217, 116, 248, 208, 96, 190, 83, 91], 10000, &[180, 239, 28, 64, 223, 140, 173, 189, 76, 106, 243, 46, 4, 197, 78, 191, 173, 183, 56, 219]).unwrap();
+        assert_eq!(*key.key, [1, 175, 189, 124, 213, 73, 197, 214, 87, 49, 44, 103, 101, 192, 41, 133, 164, 22, 90, 74, 157, 172, 152, 74, 175, 80, 254, 114, 64, 2, 93, 105]);
+        let key = BeltKey256::pbkdf2(&[104, 40, 39, 218, 217, 116, 248, 208, 96, 190, 83, 91], 100000, &[180, 239, 28, 64, 223, 140, 173, 189, 76, 106, 243, 46, 4, 197, 78, 191, 173, 183, 56, 219]).unwrap();
+        assert_eq!(*key.key, [31, 82, 120, 128, 222, 244, 234, 180, 239, 193, 201, 102, 127, 52, 4, 125, 246, 54, 130, 7, 18, 227, 203, 202, 247, 229, 212, 224, 152, 245, 128, 120]);
+        let key = BeltKey256::pbkdf2(&[104, 40, 39, 218, 217, 116, 248, 208, 96, 190, 83, 91], 10000, &[]).unwrap();
+        assert_eq!(*key.key, [37, 132, 77, 133, 246, 23, 232, 35, 157, 107, 119, 89, 230, 204, 7, 153, 36, 198, 45, 95, 16, 225, 193, 60, 184, 104, 210, 154, 107, 214, 158, 40]);
+    }
+
+    #[test]
+    fn test_key_shrink_cast() {
+        let key256 = BeltKey256::new([55, 191, 218, 155, 143, 224, 205, 203, 249, 213, 113, 158, 45, 54, 68, 87, 244, 58, 197, 167, 99, 85, 29, 33, 209, 229, 52, 173, 237, 161, 22, 229]);
+        let key192 = key256.clone().to_key192();
+        let key192u = key256.clone().to_key192_unchecked();
+        assert_eq!(key192, key192u);
+        assert_eq!(*key192.key, [55, 191, 218, 155, 143, 224, 205, 203, 249, 213, 113, 158, 45, 54, 68, 87, 244, 58, 197, 167, 99, 85, 29, 33]);
+        let key128_256 = key256.clone().to_key128();
+        let key128u_256 = key256.clone().to_key128_unchecked();
+        let key128 = key192.clone().to_key128();
+        let key128u = key192.clone().to_key128_unchecked();
+        assert_eq!(key128_256, key128u_256);
+        assert_eq!(key128_256, key128);
+        assert_eq!(key128_256, key128u);
+        assert_eq!(*key128_256.key, [55, 191, 218, 155, 143, 224, 205, 203, 249, 213, 113, 158, 45, 54, 68, 87]);
+        let plaintext = [37, 39, 57, 246, 12, 186, 61, 140, 229, 178, 45, 253, 98, 218, 68, 172];
+        let correct_ciphertext = [182, 236, 239, 14, 35, 181, 245, 35, 105, 79, 235, 219, 21, 70, 154, 27];
+        let ciphertext = key256.encrypt(plaintext);
+        assert_eq!(ciphertext, correct_ciphertext);
+        assert_eq!(key256.decrypt(ciphertext), plaintext);
+        let plaintext = [37, 39, 57, 246, 12, 186, 61, 140, 229, 178, 45, 253, 98, 218, 68, 172];
+        let correct_ciphertext = [143, 152, 166, 156, 6, 94, 158, 20, 17, 63, 185, 237, 144, 5, 144, 155];
+        for key in [key192, key192u].iter() {
+            let ciphertext = key.encrypt(plaintext);
+            assert_eq!(ciphertext, correct_ciphertext);
+            assert_eq!(key.decrypt(ciphertext), plaintext);
+        }
+        let plaintext = [37, 39, 57, 246, 12, 186, 61, 140, 229, 178, 45, 253, 98, 218, 68, 172];
+        let correct_ciphertext = [33, 165, 92, 46, 210, 223, 94, 48, 45, 82, 143, 105, 142, 18, 130, 201];
+        for key in [key128_256, key128u_256, key128, key128u].iter() {
+            let ciphertext = key.encrypt(plaintext);
+            assert_eq!(ciphertext, correct_ciphertext);
+            assert_eq!(key.decrypt(ciphertext), plaintext);
+        }
     }
 }

@@ -2,6 +2,7 @@ use std::ffi;
 
 use crate::{bindings, errors::{BashError, BashErrorKind, Bee2Result}, ERR_OK};
 
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BashHash {
     state: Vec<u8>,
     resistance_level: u16,
@@ -95,6 +96,7 @@ impl BashHash {
 
 macro_rules! define_bash_hash {
     ($name:ident, $resistance_level:literal) => {
+        #[derive(Debug, Clone, PartialEq, Eq)]
         pub struct $name {
             hash: BashHash,
         }

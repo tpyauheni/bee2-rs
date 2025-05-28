@@ -37,7 +37,7 @@ pub trait Brng {
     next_number!(next_f64, f64, 8);
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CtrRng {
     state: Box<[u8]>,
 }
@@ -104,7 +104,7 @@ impl ToBee2 for CtrRng {
     }
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct HmacRng {
     state: Box<[u8]>,
 }

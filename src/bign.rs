@@ -2,13 +2,21 @@ use std::ffi::{self, CString};
 
 use crate::{bindings, brng, errors::{AnyError, Bee2Result, BignError}, ERR_OK};
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct BignParameters {
     pub params: bindings::bign_params,
     pub config: BignParametersConfiguration,
 }
 
-#[derive(Clone)]
+impl PartialEq for BignParameters {
+    fn eq(&self, other: &Self) -> bool {
+        self.config == other.config
+    }
+}
+
+impl Eq for BignParameters {}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum BignParametersConfiguration {
     B1,
     B2,
@@ -67,6 +75,7 @@ impl BignParameters {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BignKey {
     pub private_key: Box<[u8]>,
     pub public_key: Box<[u8]>,
