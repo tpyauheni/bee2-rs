@@ -1,5 +1,5 @@
-use std::{env, fs, path::PathBuf, process::Command, time::SystemTime};
 use glob::glob;
+use std::{env, fs, path::PathBuf, process::Command, time::SystemTime};
 
 const INCLUDE_DIRS: [&str; 2] = ["include", "src"];
 
@@ -38,7 +38,9 @@ impl Builder<'_> {
 
     fn build_clib(&mut self) {
         eprintln!("Building CLib to {:?}", self.clib_dir);
-        let bee2_c = cmake::Config::new("bee2-c").out_dir(self.clib_dir.join("cmake")).build();
+        let bee2_c = cmake::Config::new("bee2-c")
+            .out_dir(self.clib_dir.join("cmake"))
+            .build();
         let bee2_c_str = bee2_c.to_str().unwrap();
         eprintln!("Builded CLib to {bee2_c_str}");
     }
@@ -54,22 +56,24 @@ impl Builder<'_> {
             bindings = bindings.clang_arg(format!("-I{}/{include_dir}", self.lib_dir_str));
         }
 
-        let bindings = bindings
-            .generate()
-            .unwrap();
+        let bindings = bindings.generate().unwrap();
 
-        bindings.write_to_file(clib_dir.join("bindings.rs")).unwrap();
-        eprintln!("Generated bindings source to {:?}", clib_dir.join("bindings.rs"));
+        bindings
+            .write_to_file(clib_dir.join("bindings.rs"))
+            .unwrap();
+        eprintln!(
+            "Generated bindings source to {:?}",
+            clib_dir.join("bindings.rs")
+        );
     }
 
     fn generate_bindings_header(&mut self) -> bool {
         let clib_dir = &self.clib_dir;
-        let glob_result = glob(
-            &format!("{}/**/*.h", self.lib_dir_str)
-        );
-        let header_files: Vec<String> = glob_result.unwrap().map(|entry| {
-            entry.unwrap().to_str().unwrap().to_owned()
-        }).collect();
+        let glob_result = glob(&format!("{}/**/*.h", self.lib_dir_str));
+        let header_files: Vec<String> = glob_result
+            .unwrap()
+            .map(|entry| entry.unwrap().to_str().unwrap().to_owned())
+            .collect();
 
         let mut content: String = String::new();
         content += "#include \"";
@@ -77,9 +81,9 @@ impl Builder<'_> {
         content += "\"";
         let header_path = clib_dir.join("bindings.h").to_str().unwrap().to_owned();
 
-        if !fs::exists(&header_path).unwrap_or(true) || content != String::from_utf8(
-            fs::read(&header_path).unwrap()
-        ).unwrap() {
+        if !fs::exists(&header_path).unwrap_or(true)
+            || content != String::from_utf8(fs::read(&header_path).unwrap()).unwrap()
+        {
             fs::write(&header_path, content).unwrap();
             eprintln!("Generated bindings header to {header_path}");
             true
@@ -118,9 +122,10 @@ fn main() {
 
     let force_regen_bindings = builder.generate_bindings_header();
 
-    if force_regen_bindings ||
-        clib_rebuilt ||
-        !fs::exists(builder.clib_dir.join("bindings.rs")).unwrap_or(false) {
-            builder.generate_bindings_source();
+    if force_regen_bindings
+        || clib_rebuilt
+        || !fs::exists(builder.clib_dir.join("bindings.rs")).unwrap_or(false)
+    {
+        builder.generate_bindings_source();
     }
 }

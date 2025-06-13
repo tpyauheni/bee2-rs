@@ -25,15 +25,25 @@ impl Block {
     #[cfg(feature = "block-padding")]
     fn block_unpad(data: Vec<Box<[u8]>>) -> Bee2Result<Box<[u8]>> {
         let Some((last_block, block_size)) = data.last().map(|value| (value, value.len())) else {
-            return Err(InvalidPaddingError::new_box(InvalidPaddingErrorKind::NoBlocks(data)));
+            return Err(InvalidPaddingError::new_box(
+                InvalidPaddingErrorKind::NoBlocks(data),
+            ));
         };
 
         let Some(&last_block_size) = last_block.last() else {
-            return Err(InvalidPaddingError::new_box(InvalidPaddingErrorKind::NoData(data)));
+            return Err(InvalidPaddingError::new_box(
+                InvalidPaddingErrorKind::NoData(data),
+            ));
         };
 
         if last_block_size as usize >= last_block.len() {
-            return Err(InvalidPaddingError::new_box(InvalidPaddingErrorKind::NotEnoughData(data.clone(), last_block_size, last_block.len() as u8)));
+            return Err(InvalidPaddingError::new_box(
+                InvalidPaddingErrorKind::NotEnoughData(
+                    data.clone(),
+                    last_block_size,
+                    last_block.len() as u8,
+                ),
+            ));
         }
 
         let mut last_data_chunk: Vec<u8> = vec![];
@@ -42,7 +52,14 @@ impl Block {
             if (i as u8) < last_block_size {
                 last_data_chunk.push(*byte);
             } else if *byte != last_block_size {
-                return Err(InvalidPaddingError::new_box(InvalidPaddingErrorKind::InvalidPaddingData(data.clone(), i, *byte, last_block_size)));
+                return Err(InvalidPaddingError::new_box(
+                    InvalidPaddingErrorKind::InvalidPaddingData(
+                        data.clone(),
+                        i,
+                        *byte,
+                        last_block_size,
+                    ),
+                ));
             }
         }
 
@@ -50,7 +67,14 @@ impl Block {
 
         for (i, block) in data.iter().take(data.len() - 1).enumerate() {
             if block_size != block.len() {
-                return Err(InvalidPaddingError::new_box(InvalidPaddingErrorKind::DifferentBlockSizes(data.clone(), i, block_size as u8, block.len() as u8)));
+                return Err(InvalidPaddingError::new_box(
+                    InvalidPaddingErrorKind::DifferentBlockSizes(
+                        data.clone(),
+                        i,
+                        block_size as u8,
+                        block.len() as u8,
+                    ),
+                ));
             }
             result_data.extend(block);
         }
@@ -111,7 +135,9 @@ impl Block {
             if let Some(result) = data.first() {
                 Ok(result).cloned()
             } else {
-                Err(InvalidPaddingError::new_box(InvalidPaddingErrorKind::NoBlocks(data)))
+                Err(InvalidPaddingError::new_box(
+                    InvalidPaddingErrorKind::NoBlocks(data),
+                ))
             }
         }
     }
