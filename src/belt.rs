@@ -214,7 +214,7 @@ macro_rules! belt_encryption_algorithm {
                 for mut block in padded_plaintext {
                     unsafe { bindings::$encrypt_func(
                         block.as_mut_ptr() as *mut ffi::c_void,
-                        $block_size,
+                        block.len(),
                         self.state.as_mut_ptr() as *mut ffi::c_void,
                     ); }
                     blocks.push(block);
@@ -230,19 +230,31 @@ macro_rules! belt_encryption_algorithm {
                 &mut self,
                 mut ciphertext: Box<[u8]>,
             ) -> Bee2Result<Box<[u8]>> {
-                if ciphertext.len() < $block_size || ciphertext.len() % $block_size != 0 {
-                    return Err(InvalidBlockError::new_box());
+                #[cfg(feature = "block-padding")]
+                {
+                    if ciphertext.len() < $block_size || ciphertext.len() % $block_size != 0 {
+                        return Err(InvalidBlockError::new_box());
+                    }
+                    let mut padded_plaintext: Vec<Box<[u8]>> = vec![];
+                    for chunk in ciphertext.chunks_mut($block_size) {
+                        unsafe { bindings::$decrypt_func(
+                            chunk.as_mut_ptr() as *mut ffi::c_void,
+                            $block_size,
+                            self.state.as_mut_ptr() as *mut ffi::c_void,
+                        ); }
+                        padded_plaintext.push(Box::from(chunk));
+                    }
+                    Block::unpad(padded_plaintext)
                 }
-                let mut padded_plaintext: Vec<Box<[u8]>> = vec![];
-                for chunk in ciphertext.chunks_mut($block_size) {
+                #[cfg(not(feature = "block-padding"))]
+                {
                     unsafe { bindings::$decrypt_func(
-                        chunk.as_mut_ptr() as *mut ffi::c_void,
-                        $block_size,
+                        ciphertext.as_mut_ptr() as *mut ffi::c_void,
+                        ciphertext.len(),
                         self.state.as_mut_ptr() as *mut ffi::c_void,
                     ); }
-                    padded_plaintext.push(Box::from(chunk));
+                    Ok(ciphertext)
                 }
-                Block::unpad(padded_plaintext)
             }
         }
     };

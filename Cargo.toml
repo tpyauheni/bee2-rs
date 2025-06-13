@@ -9,9 +9,10 @@ bindgen = "0.71"
 glob = "0.3"
 
 [features]
-default = ["full"]
+default = []
 
 block = []
+block-padding = ["block"]
 
 belt = ["block"]
 belt-wbl = ["belt"]
@@ -43,7 +44,7 @@ bash-hash = ["bash"]
 bash-prg = ["bash"]
 bash-full = ["bash-hash", "bash-prg"]
 
-full = []
+full = ["bash-full", "bign", "brng", "belt-full", "block-padding"]
 
 [profile.release]
 lto = true
