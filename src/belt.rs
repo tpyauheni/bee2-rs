@@ -2,6 +2,7 @@ use std::{ffi, rc::Rc};
 
 #[cfg(feature = "belt-hmac")]
 use crate::belt_hmac::BeltHmac;
+<<<<<<< HEAD
 #[cfg(feature = "block-padding")]
 use crate::block::Block;
 #[cfg(feature = "block-padding")]
@@ -9,6 +10,15 @@ use crate::errors::InvalidBlockError;
 #[cfg(feature = "belt-pbkdf2")]
 use crate::errors::{BeltError, BeltErrorKind};
 use crate::{bindings, errors::Bee2Result};
+=======
+use crate::{bindings, errors::Bee2Result};
+#[cfg(feature = "block-padding")]
+use crate::block::Block;
+#[cfg(feature = "belt-pbkdf2")]
+use crate::errors::{BeltError, BeltErrorKind};
+#[cfg(feature = "block-padding")]
+use crate::errors::InvalidBlockError;
+>>>>>>> 285bcd3 (Fixed errors, made "block-padding" a default feature, fixed warnings)
 
 pub trait BeltKey {
     fn len() -> u8;
