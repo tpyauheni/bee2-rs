@@ -1,8 +1,13 @@
 use std::error::Error;
 
-pub trait Bee2Error : Error {}
+pub trait Bee2Error: Error {}
 
-#[cfg(any(feature = "bign", feature = "belt", feature = "block", feature = "brng"))]
+#[cfg(any(
+    feature = "bign",
+    feature = "belt",
+    feature = "block",
+    feature = "brng"
+))]
 macro_rules! error {
     ($visibility:vis struct $name:ident { $($struct_field_name:ident: $struct_field_type:ty),* $(,)? } Default { $($struct_init:tt),* $(,)? } $(,)?) => {
         #[derive(Debug)]
@@ -52,16 +57,11 @@ macro_rules! error {
 error!(
     pub struct AnyError {
         error: Box<dyn std::error::Error>,
-    }
-    Default {
-        error,
-    }
+    },
+    Default { error }
 );
 #[cfg(feature = "belt")]
-error!(
-    pub struct InvalidBlockError {}
-    Default {}
-);
+error!(pub struct InvalidBlockError {}, Default {});
 #[cfg(feature = "block")]
 error!(
     pub struct InvalidPaddingError {}
@@ -83,10 +83,8 @@ error!(
 error!(
     pub struct BignError {
         code: u32,
-    }
-    Default {
-        code,
-    }
+    },
+    Default { code }
 );
 #[cfg(feature = "bash")]
 error!(

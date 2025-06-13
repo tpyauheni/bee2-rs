@@ -1,6 +1,9 @@
 use std::ffi;
 
-use crate::{bindings, errors::{Bee2Result, BrngError, BrngErrorKind}, ERR_OK};
+use crate::{
+    ERR_OK, bindings,
+    errors::{Bee2Result, BrngError, BrngErrorKind},
+};
 
 pub type Rng = bindings::gen_i;
 
@@ -47,35 +50,36 @@ impl CtrRng {
         let state_len: usize = unsafe { bindings::brngCTR_keep() };
         let state_vec: Vec<u8> = vec![0; state_len];
         let mut state: Box<[u8]> = state_vec.into_boxed_slice();
-        unsafe { bindings::brngCTRStart(
-            state.as_mut_ptr() as *mut ffi::c_void,
-            key.as_ptr(),
-            match iv {
-                Some(iv) => iv.as_ptr(),
-                None => std::ptr::null(),
-            },
-        ); }
-        Self {
-            state,
+        unsafe {
+            bindings::brngCTRStart(
+                state.as_mut_ptr() as *mut ffi::c_void,
+                key.as_ptr(),
+                match iv {
+                    Some(iv) => iv.as_ptr(),
+                    None => std::ptr::null(),
+                },
+            );
         }
+        Self { state }
     }
 
     pub fn get_iv(&mut self) -> [u8; 32] {
         let mut iv: Box<[u8]> = Box::new([0; 32]);
-        unsafe { bindings::brngCTRStepG(
-            iv.as_mut_ptr(),
-            self.state.as_mut_ptr() as *mut ffi::c_void,
-        ) };
+        unsafe {
+            bindings::brngCTRStepG(iv.as_mut_ptr(), self.state.as_mut_ptr() as *mut ffi::c_void)
+        };
         (*iv).try_into().unwrap()
     }
 
     pub fn fill_buffer(buffer: &mut [u8], key: &[u8; 32], iv: &mut [u8; 32]) -> Bee2Result<()> {
-        let code = unsafe { bindings::brngCTRRand(
-            buffer.as_mut_ptr() as *mut ffi::c_void,
-            buffer.len(),
-            key.as_ptr(),
-            iv.as_mut_ptr(),
-        ) };
+        let code = unsafe {
+            bindings::brngCTRRand(
+                buffer.as_mut_ptr() as *mut ffi::c_void,
+                buffer.len(),
+                key.as_ptr(),
+                iv.as_mut_ptr(),
+            )
+        };
         if code == ERR_OK {
             Ok(())
         } else {
@@ -86,11 +90,13 @@ impl CtrRng {
 
 impl Brng for CtrRng {
     fn next_buffer(&mut self, buffer: &mut [u8]) {
-        unsafe { bindings::brngCTRStepR(
-            buffer.as_mut_ptr() as *mut ffi::c_void,
-            buffer.len(),
-            self.state.as_mut_ptr() as *mut ffi::c_void,
-        ); }
+        unsafe {
+            bindings::brngCTRStepR(
+                buffer.as_mut_ptr() as *mut ffi::c_void,
+                buffer.len(),
+                self.state.as_mut_ptr() as *mut ffi::c_void,
+            );
+        }
     }
 }
 
@@ -114,27 +120,29 @@ impl HmacRng {
         let state_len: usize = unsafe { bindings::brngHMAC_keep() };
         let state_vec: Vec<u8> = vec![0; state_len];
         let mut state: Box<[u8]> = state_vec.into_boxed_slice();
-        unsafe { bindings::brngHMACStart(
-            state.as_mut_ptr() as *mut ffi::c_void,
-            key.as_ptr(),
-            key.len(),
-            iv.as_ptr(),
-            iv.len(),
-        ); }
-        Self {
-            state,
+        unsafe {
+            bindings::brngHMACStart(
+                state.as_mut_ptr() as *mut ffi::c_void,
+                key.as_ptr(),
+                key.len(),
+                iv.as_ptr(),
+                iv.len(),
+            );
         }
+        Self { state }
     }
 
     pub fn fill_buffer(buffer: &mut [u8], key: &[u8], iv: &[u8]) -> Bee2Result<()> {
-        let code = unsafe { bindings::brngHMACRand(
-            buffer.as_mut_ptr() as *mut ffi::c_void,
-            buffer.len(),
-            key.as_ptr(),
-            key.len(),
-            iv.as_ptr(),
-            iv.len(),
-        ) };
+        let code = unsafe {
+            bindings::brngHMACRand(
+                buffer.as_mut_ptr() as *mut ffi::c_void,
+                buffer.len(),
+                key.as_ptr(),
+                key.len(),
+                iv.as_ptr(),
+                iv.len(),
+            )
+        };
         if code == ERR_OK {
             Ok(())
         } else {
@@ -145,11 +153,13 @@ impl HmacRng {
 
 impl Brng for HmacRng {
     fn next_buffer(&mut self, buffer: &mut [u8]) {
-        unsafe { bindings::brngHMACStepR(
-            buffer.as_mut_ptr() as *mut ffi::c_void,
-            buffer.len(),
-            self.state.as_mut_ptr() as *mut ffi::c_void,
-        ); }
+        unsafe {
+            bindings::brngHMACStepR(
+                buffer.as_mut_ptr() as *mut ffi::c_void,
+                buffer.len(),
+                self.state.as_mut_ptr() as *mut ffi::c_void,
+            );
+        }
     }
 }
 
@@ -171,8 +181,17 @@ mod tests {
 
     #[test]
     fn test_ctr() {
-        let iv = [160, 78, 75, 213, 247, 122, 26, 130, 210, 165, 152, 151, 127, 68, 13, 191, 218, 254, 187, 106, 158, 184, 100, 249, 28, 175, 182, 11, 49, 238, 79, 159];
-        let mut ctr = CtrRng::new([158, 230, 31, 207, 83, 232, 111, 51, 4, 97, 42, 123, 19, 171, 124, 57, 27, 59, 94, 169, 206, 98, 239, 7, 194, 79, 47, 223, 189, 60, 49, 18], Some(iv));
+        let iv = [
+            160, 78, 75, 213, 247, 122, 26, 130, 210, 165, 152, 151, 127, 68, 13, 191, 218, 254,
+            187, 106, 158, 184, 100, 249, 28, 175, 182, 11, 49, 238, 79, 159,
+        ];
+        let mut ctr = CtrRng::new(
+            [
+                158, 230, 31, 207, 83, 232, 111, 51, 4, 97, 42, 123, 19, 171, 124, 57, 27, 59, 94,
+                169, 206, 98, 239, 7, 194, 79, 47, 223, 189, 60, 49, 18,
+            ],
+            Some(iv),
+        );
         assert_eq!(ctr.get_iv(), iv);
         assert_eq!(ctr.next_u128(), 33223543754351378494114892648771219256);
         assert_eq!(ctr.next_u128(), 254770662039789769201022743983165607334);
@@ -181,18 +200,39 @@ mod tests {
         assert_eq!(ctr.next_i8(), 55);
         let mut bytes = [0; 50];
         ctr.next_buffer(&mut bytes);
-        let correct_bytes = [147, 70, 47, 220, 55, 119, 251, 51, 229, 241, 36, 174, 253, 49, 72, 21, 200, 101, 45, 138, 104, 221, 98, 163, 160, 193, 227, 145, 9, 125, 135, 40, 194, 199, 58, 243, 133, 108, 177, 5, 195, 104, 34, 253, 70, 249, 135, 254, 229, 142];
+        let correct_bytes = [
+            147, 70, 47, 220, 55, 119, 251, 51, 229, 241, 36, 174, 253, 49, 72, 21, 200, 101, 45,
+            138, 104, 221, 98, 163, 160, 193, 227, 145, 9, 125, 135, 40, 194, 199, 58, 243, 133,
+            108, 177, 5, 195, 104, 34, 253, 70, 249, 135, 254, 229, 142,
+        ];
         assert_eq!(bytes, correct_bytes);
         let mut bytes = [0; 10];
         let correct_bytes = [38, 63, 132, 211, 241, 76, 105, 55, 193, 59];
-        let mut iv = [24, 86, 158, 178, 84, 209, 205, 75, 115, 252, 28, 234, 153, 108, 240, 32, 213, 68, 123, 71, 73, 198, 180, 1, 91, 116, 158, 15, 46, 65, 143, 233];
-        CtrRng::fill_buffer( &mut bytes, &[249, 185, 242, 52, 67, 251, 170, 132, 15, 99, 211, 198, 102, 161, 21, 158, 124, 185, 156, 131, 232, 88, 234, 41, 1, 41, 218, 189, 147, 62, 245, 195], &mut iv).unwrap();
+        let mut iv = [
+            24, 86, 158, 178, 84, 209, 205, 75, 115, 252, 28, 234, 153, 108, 240, 32, 213, 68, 123,
+            71, 73, 198, 180, 1, 91, 116, 158, 15, 46, 65, 143, 233,
+        ];
+        CtrRng::fill_buffer(
+            &mut bytes,
+            &[
+                249, 185, 242, 52, 67, 251, 170, 132, 15, 99, 211, 198, 102, 161, 21, 158, 124,
+                185, 156, 131, 232, 88, 234, 41, 1, 41, 218, 189, 147, 62, 245, 195,
+            ],
+            &mut iv,
+        )
+        .unwrap();
         assert_eq!(bytes, correct_bytes);
     }
 
     #[test]
     fn test_ctr_no_iv() {
-        let mut ctr = CtrRng::new( [158, 230, 31, 207, 83, 232, 111, 51, 4, 97, 42, 123, 19, 171, 124, 57, 27, 59, 94, 169, 206, 98, 239, 7, 194, 79, 47, 223, 189, 60, 49, 18], None);
+        let mut ctr = CtrRng::new(
+            [
+                158, 230, 31, 207, 83, 232, 111, 51, 4, 97, 42, 123, 19, 171, 124, 57, 27, 59, 94,
+                169, 206, 98, 239, 7, 194, 79, 47, 223, 189, 60, 49, 18,
+            ],
+            None,
+        );
         assert_eq!(ctr.get_iv(), [0; 32]);
         assert_eq!(ctr.next_u128(), 120334134796420904791598703945664266902);
         assert_eq!(ctr.next_u128(), 304616918565234888971579775217524550230);
@@ -201,7 +241,11 @@ mod tests {
         assert_eq!(ctr.next_i8(), 58);
         let mut bytes = [0; 50];
         ctr.next_buffer(&mut bytes);
-        let correct_bytes = [211, 55, 107, 155, 251, 113, 255, 200, 127, 108, 230, 144, 223, 93, 236, 116, 7, 149, 27, 218, 196, 123, 86, 177, 110, 104, 252, 167, 195, 185, 148, 127, 12, 140, 102, 121, 241, 233, 203, 135, 22, 127, 59, 0, 251, 255, 143, 174, 95, 28];
+        let correct_bytes = [
+            211, 55, 107, 155, 251, 113, 255, 200, 127, 108, 230, 144, 223, 93, 236, 116, 7, 149,
+            27, 218, 196, 123, 86, 177, 110, 104, 252, 167, 195, 185, 148, 127, 12, 140, 102, 121,
+            241, 233, 203, 135, 22, 127, 59, 0, 251, 255, 143, 174, 95, 28,
+        ];
         assert_eq!(bytes, correct_bytes);
     }
 
