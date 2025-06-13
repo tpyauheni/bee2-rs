@@ -5,7 +5,8 @@ pub struct Block {
 }
 
 impl Block {
-    pub fn pad(data: &[u8], block_size: u8) -> Vec<Box<[u8]>> {
+    #[cfg(feature = "block-padding")]
+    fn block_pad(data: &[u8], block_size: u8) -> Vec<Box<[u8]>> {
         let mut blocks: Vec<Box<[u8]>> = data
             .chunks(block_size as usize)
             .take(data.len() / block_size as usize)
@@ -21,7 +22,8 @@ impl Block {
         blocks
     }
 
-    pub fn unpad(data: Vec<Box<[u8]>>) -> Bee2Result<Box<[u8]>> {
+    #[cfg(feature = "block-padding")]
+    fn block_unpad(data: Vec<Box<[u8]>>) -> Bee2Result<Box<[u8]>> {
         let Some((last_block, block_size)) = data.last().map(|value| (value, value.len())) else {
             return Err(InvalidPaddingError::new_box(InvalidPaddingErrorKind::NoBlocks(data)));
         };
@@ -58,7 +60,8 @@ impl Block {
         Ok(result_data.into_boxed_slice())
     }
 
-    pub fn is_padding_correct(data: Vec<Box<[u8]>>) -> bool {
+    #[cfg(feature = "block-padding")]
+    fn block_is_padding_correct(data: Vec<Box<[u8]>>) -> bool {
         let Some((last_block, block_size)) = data.last().map(|value| (value, value.len())) else {
             return false;
         };
@@ -84,6 +87,44 @@ impl Block {
         }
 
         true
+    }
+
+    pub fn pad(data: &[u8], block_size: u8) -> Vec<Box<[u8]>> {
+        #[cfg(feature = "block-padding")]
+        {
+            Self::block_pad(data, block_size)
+        }
+        #[cfg(not(feature = "block-padding"))]
+        {
+            let _ = block_size;
+            vec![Box::from(data)]
+        }
+    }
+
+    pub fn unpad(data: Vec<Box<[u8]>>) -> Bee2Result<Box<[u8]>> {
+        #[cfg(feature = "block-padding")]
+        {
+            Self::block_unpad(data)
+        }
+        #[cfg(not(feature = "block-padding"))]
+        {
+            if let Some(result) = data.first() {
+                Ok(result).cloned()
+            } else {
+                Err(InvalidPaddingError::new_box(InvalidPaddingErrorKind::NoBlocks(data)))
+            }
+        }
+    }
+
+    pub fn is_padding_correct(data: Vec<Box<[u8]>>) -> bool {
+        #[cfg(feature = "block-padding")]
+        {
+            Self::block_is_padding_correct(data)
+        }
+        #[cfg(not(feature = "block-padding"))]
+        {
+            !data.is_empty()
+        }
     }
 }
 
