@@ -2,11 +2,13 @@ use std::{ffi, rc::Rc};
 
 #[cfg(feature = "belt-hmac")]
 use crate::belt_hmac::BeltHmac;
-use crate::{
-    bindings,
-    block::Block,
-    errors::{Bee2Result, BeltError, BeltErrorKind, InvalidBlockError},
-};
+use crate::{bindings, errors::Bee2Result};
+#[cfg(feature = "block-padding")]
+use crate::block::Block;
+#[cfg(feature = "belt-pbkdf2")]
+use crate::errors::{BeltError, BeltErrorKind};
+#[cfg(feature = "block-padding")]
+use crate::errors::InvalidBlockError;
 
 pub trait BeltKey {
     fn len() -> u8;
