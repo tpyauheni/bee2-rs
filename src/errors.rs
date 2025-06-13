@@ -9,7 +9,7 @@ pub trait Bee2Error: Error {}
     feature = "brng"
 ))]
 macro_rules! error {
-    ($visibility:vis struct $name:ident { $($struct_field_name:ident: $struct_field_type:ty),* $(,)? } Default { $($struct_init:tt),* $(,)? } $(,)?) => {
+    ($visibility:vis struct $name:ident { $($struct_field_name:ident: $struct_field_type:ty),* $(,)? }, Default { $($struct_init:tt),* $(,)? } $(,)?) => {
         #[derive(Debug)]
         #[allow(dead_code)]
         $visibility struct $name {
@@ -20,7 +20,7 @@ macro_rules! error {
         }
 
         impl $name {
-            pub(crate) fn new_box($($struct_field_name: $struct_field_type),*) -> Box<dyn Bee2Error> {
+            pub fn new_box($($struct_field_name: $struct_field_type),*) -> Box<dyn Bee2Error> {
                 Box::new(Self {
                     $($struct_init),*
                 }) as Box<dyn Bee2Error>
@@ -45,7 +45,7 @@ macro_rules! error {
             $visibility struct $name {
                 kind: $enum_name,
                 $($struct_field_name: $struct_field_type),*
-            } Default {
+            }, Default {
                 kind,
                 $($struct_init),*
             }

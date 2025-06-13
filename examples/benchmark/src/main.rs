@@ -34,7 +34,7 @@ fn main() {
     let input_bytes = &[72, 101, 108, 108, 111, 44, 32, 87, 111, 114, 108, 100, 33, 32, 84, 104, 105, 115, 32, 105, 115, 32, 97, 32, 116, 101, 115, 116, 46, 0, 0, 0];
     let key = bee2_rs::belt::BeltKey128::new([16; 16]);
     let iv = [16; 16];
-    for i in 0..max_n - 1 {
+    for _i in 0..max_n - 1 {
         crypto_things(input_bytes, &key, iv, false);
     }
     crypto_things(input_bytes, &key, iv, true);
