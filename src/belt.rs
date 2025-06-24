@@ -1,8 +1,9 @@
 use std::{ffi, rc::Rc};
 
+#[cfg(feature = "belt-dwp")]
+use crate::ERR_OK;
 #[cfg(feature = "belt-hmac")]
 use crate::belt_hmac::BeltHmac;
-<<<<<<< HEAD
 #[cfg(feature = "block-padding")]
 use crate::block::Block;
 #[cfg(feature = "block-padding")]
@@ -10,15 +11,6 @@ use crate::errors::InvalidBlockError;
 #[cfg(feature = "belt-pbkdf2")]
 use crate::errors::{BeltError, BeltErrorKind};
 use crate::{bindings, errors::Bee2Result};
-=======
-use crate::{bindings, errors::Bee2Result};
-#[cfg(feature = "block-padding")]
-use crate::block::Block;
-#[cfg(feature = "belt-pbkdf2")]
-use crate::errors::{BeltError, BeltErrorKind};
-#[cfg(feature = "block-padding")]
-use crate::errors::InvalidBlockError;
->>>>>>> 285bcd3 (Fixed errors, made "block-padding" a default feature, fixed warnings)
 
 pub trait BeltKey {
     fn len() -> u8;
@@ -61,7 +53,7 @@ macro_rules! key {
     ($name: ident, $len: expr) => {
         #[derive(Debug, Clone, PartialEq, Eq)]
         pub struct $name {
-            key: Rc<[u8; $len]>,
+            pub(crate) key: Rc<[u8; $len]>,
         }
 
         impl $name {
@@ -138,6 +130,12 @@ macro_rules! key {
         impl BeltKey for $name {
             fn len() -> u8 {
                 $len
+            }
+        }
+
+        impl AsKey for $name {
+            fn as_key(&self) -> BeltKey256 {
+                self.expand()
             }
         }
     };
@@ -310,6 +308,109 @@ belt_encryption_algorithm!(BeltChe, beltCHEStart, beltCHEStepE, beltCHEStepD, 16
 belt_encryption_algorithm!(BeltKwp, beltWBLStart, beltWBLStepE, beltWBLStepD, 32);
 #[cfg(feature = "belt-bde")]
 belt_encryption_algorithm!(BeltBde, beltBDEStart, beltBDEStepE, beltBDEStepD, 16);
+
+pub trait AsKey {
+    fn as_key(&self) -> BeltKey256;
+}
+
+#[cfg(feature = "belt-dwp")]
+impl BeltDwp {
+    pub fn update_public(&mut self, data: &[u8]) {
+        unsafe {
+            bindings::beltDWPStepI(
+                data.as_ptr() as *const ffi::c_void,
+                data.len(),
+                self.state.as_mut_ptr() as *mut ffi::c_void,
+            );
+        }
+    }
+
+    pub fn update_private(&mut self, data: &[u8]) {
+        unsafe {
+            bindings::beltDWPStepA(
+                data.as_ptr() as *const ffi::c_void,
+                data.len(),
+                self.state.as_mut_ptr() as *mut ffi::c_void,
+            );
+        }
+    }
+
+    pub fn mac(mut self) -> [u8; 8] {
+        let mut mac = [0u8; 8];
+        unsafe {
+            bindings::beltDWPStepG(
+                mac.as_mut_ptr(),
+                self.state.as_mut_ptr() as *mut ffi::c_void,
+            )
+        }
+        mac
+    }
+
+    pub fn verify(mut self, mac: [u8; 8]) -> bool {
+        unsafe {
+            bindings::beltDWPStepV(mac.as_ptr(), self.state.as_mut_ptr() as *mut ffi::c_void) != 0
+        }
+    }
+
+    pub fn wrap<K: AsKey>(
+        private_data: &[u8],
+        public_data: &[u8],
+        key: &K,
+        iv: [u8; 16],
+    ) -> Bee2Result<(Box<[u8]>, [u8; 8])> {
+        let mut encrypted_data: Vec<u8> = vec![0; private_data.len()];
+        let mut mac: [u8; 8] = [0; 8];
+        let key = key.as_key();
+        let code = unsafe {
+            bindings::beltDWPWrap(
+                encrypted_data.as_mut_ptr() as *mut ffi::c_void,
+                mac.as_mut_ptr(),
+                private_data.as_ptr() as *mut ffi::c_void,
+                private_data.len(),
+                public_data.as_ptr() as *mut ffi::c_void,
+                public_data.len(),
+                key.key.as_ptr(),
+                key.key.len(),
+                iv.as_ptr(),
+            )
+        };
+        if code != ERR_OK {
+            Err(BeltError::new_box(BeltErrorKind::CodeError(code)))
+        } else {
+            Ok((encrypted_data.into_boxed_slice(), mac))
+        }
+    }
+
+    pub fn unwrap<K: AsKey>(
+        encrypted_data: &[u8],
+        public_data: &[u8],
+        mac: [u8; 8],
+        key: &K,
+        iv: [u8; 16],
+    ) -> Bee2Result<Box<[u8]>> {
+        let mut decrypted_data: Vec<u8> = vec![0; encrypted_data.len()];
+        let key = key.as_key();
+        let code = unsafe {
+            bindings::beltDWPUnwrap(
+                decrypted_data.as_mut_ptr() as *mut ffi::c_void,
+                encrypted_data.as_ptr() as *mut ffi::c_void,
+                encrypted_data.len(),
+                public_data.as_ptr() as *mut ffi::c_void,
+                public_data.len(),
+                mac.as_ptr(),
+                key.key.as_ptr(),
+                key.key.len(),
+                iv.as_ptr(),
+            )
+        };
+        if code != ERR_OK {
+            Err(BeltError::new_box(BeltErrorKind::CodeError(code)))
+        } else {
+            Ok(decrypted_data.into_boxed_slice())
+        }
+    }
+}
+
 // TODO: SDE, FMT, KRP, HASH, HMAC, PBKDF2.
 
 #[cfg(test)]
