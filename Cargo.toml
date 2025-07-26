@@ -1,7 +1,13 @@
 [package]
 name = "bee2-rs"
-version = "0.2.1"
+version = "0.2.2"
 edition = "2024"
+license = "Apache-2.0"
+description = "Bindings for cryptographic library Bee2"
+repository = "https://github.com/tpyauheni/bee2-rs"
+readme = "README.md"
+keywords = ["cryptography", "encryption", "key-exchange", "signature", "bee2"]
+categories = ["cryptography"]
 
 [build-dependencies]
 cmake = "0.1"
