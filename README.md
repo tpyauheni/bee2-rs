@@ -27,7 +27,7 @@
 ## Using in a project
 Add following line as a dependency in your `Cargo.toml`:
 ```toml
-bee2-rs = { git = "https://github.com/tpyauheni/bee2-rs.git" }
+bee2-rs = "0.2"
 ```
 
 ## License
