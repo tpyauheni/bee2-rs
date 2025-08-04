@@ -1,5 +1,5 @@
 use glob::glob;
-use std::{env, fs, path::PathBuf, process::Command, time::SystemTime};
+use std::{env, fs, path::{Path, PathBuf}, process::Command, time::SystemTime};
 
 const INCLUDE_DIRS: [&str; 2] = ["include", "src"];
 
@@ -102,7 +102,7 @@ fn main() {
     let mut builder = Builder {
         project_dir: project_dir.clone(),
         lib_dir_str,
-        clib_dir: project_dir.join("target").join("build"),
+        clib_dir: Path::new(&env::var("OUT_DIR").unwrap()).join("build"),
     };
 
     let clib_force_rebuild = builder.update_clib();
