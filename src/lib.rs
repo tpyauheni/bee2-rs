@@ -1,6 +1,6 @@
 #[allow(warnings)]
 pub mod bindings {
-    include!("../target/build/bindings.rs");
+    include!(concat!(env!("OUT_DIR"), "/build/bindings.rs"));
 }
 
 pub const ERR_OK: u32 = 0;
